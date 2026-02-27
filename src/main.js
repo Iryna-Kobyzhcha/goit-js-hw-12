@@ -10,7 +10,6 @@ import {
   showLoadMoreButton,
   hideLoadMoreButton,
 } from "./js/render-functions";
-
 import "./css/styles.css";
 
 const form = document.querySelector(".form");
@@ -21,11 +20,14 @@ let currentPage = 1;
 let totalHits = 0;
 const PER_PAGE = 15;
 
+/* ===================== */
+/* SEARCH */
+/* ===================== */
+
 form.addEventListener("submit", async event => {
   event.preventDefault();
 
   const searchQuery = event.target.elements["search-text"].value.trim();
-
   if (!searchQuery) return;
 
   currentQuery = searchQuery;
@@ -49,12 +51,20 @@ form.addEventListener("submit", async event => {
     }
 
     totalHits = data.totalHits;
-
     createGallery(data.hits);
 
-    if (totalHits > PER_PAGE) {
-      showLoadMoreButton();
+    /* 🔥 якщо більше сторінок немає */
+    if (totalHits <= PER_PAGE) {
+      iziToast.info({
+        message:
+          "We're sorry, but you've reached the end of search results.",
+        position: "topRight",
+      });
+      return;
     }
+
+    /* якщо ще є сторінки */
+    showLoadMoreButton();
   } catch (error) {
     iziToast.error({
       message: "Something went wrong!",
@@ -65,8 +75,15 @@ form.addEventListener("submit", async event => {
   }
 });
 
+/* ===================== */
+/* LOAD MORE */
+/* ===================== */
+
 loadMoreBtn.addEventListener("click", async () => {
   currentPage += 1;
+
+  /* 🔥 КРИТИЧНО — ховаємо кнопку одразу */
+  hideLoadMoreButton();
   showLoader();
 
   try {
@@ -74,6 +91,7 @@ loadMoreBtn.addEventListener("click", async () => {
 
     createGallery(data.hits);
 
+    /* плавний скрол */
     const { height } =
       document.querySelector(".gallery").firstElementChild.getBoundingClientRect();
 
@@ -82,14 +100,19 @@ loadMoreBtn.addEventListener("click", async () => {
       behavior: "smooth",
     });
 
-    if (currentPage * PER_PAGE >= totalHits) {
-      hideLoadMoreButton();
+    const totalLoaded = currentPage * PER_PAGE;
+
+    if (totalLoaded >= totalHits) {
       iziToast.info({
         message:
           "We're sorry, but you've reached the end of search results.",
         position: "topRight",
       });
+      return;
     }
+
+    /* якщо ще є сторінки */
+    showLoadMoreButton();
   } catch (error) {
     iziToast.error({
       message: "Something went wrong!",
